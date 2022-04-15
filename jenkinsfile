@@ -1,0 +1,91 @@
+## Reference: https://www.jenkins.io/doc/pipeline/tour/deployment/
+## Reference: https://www.jenkins.io/doc/book/pipeline/syntax/
+
+
+def gv
+CODE_CHANGES = getGITChanges() ## this has to be a groovy script to make it functional
+pipeline {
+    agent any
+	environment {
+		PROJECT = "Replace with a Jenkins Project ID"
+		NEW_VERSION = '1.0' ##this can be extracted from the code
+		SERVER_CREDENTIALS = credentials ('') ## as per document you need a Credential binding plugin
+		IMAGE_NAME = 'btodhunter/anchore-ci-demo'
+		IMAGE_TAG = 'jenkins'
+	docker {
+        image 'docker:stable'
+        }
+	kubernetes {
+      label 'mynk-litecoin'
+      defaultContainer ''##Container Description''
+      yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+labels:
+  component: ci
+spec:
+  serviceAccountName: ##service account details##
+  containers:
+  - name: golang
+    image: golang:1.10
+    command:
+    - cat
+    tty: true
+  - name: Quay
+    image: quay.io/mynkskhr/release-the-litecoin:0.18.1
+    command:
+    - cat
+    tty: true
+  - name: kubectl
+    image: gcr.io/cloud-builders/kubectl
+    command:
+    - cat
+    tty: true
+"""
+}
+  }
+
+	tools {
+		maven 'Maven'
+	}
+}	
+	stages {
+		stage("init") {
+            steps {
+                script {
+                   gv = load "script.groovy" 
+                }
+            }
+        }
+
+        stage("build") {
+            steps {
+				script {
+                    gv.buildone()
+                }
+            }
+        }
+		stage("test") {
+            steps {
+                script {
+                    gv.testone()
+                }
+            }
+        }
+		stage("Scan") {
+			steps {
+                script {
+                    gv.scanone()
+                }
+            
+        }
+        stage("deploy") {
+            steps {
+				script {
+                    gv.deployone()
+                }
+            }
+        }
+    }   
+}
